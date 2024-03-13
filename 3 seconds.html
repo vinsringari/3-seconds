@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Button Timer</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+
+<div class="container mt-5">
+    <div class="row">
+        <div class="col text-center">
+            <button id="timerButton" class="btn btn-primary">Start</button>
+            <div id="result"></div>
+        </div>
+    </div>
+    <div class="row mt-4">
+        <div class="col">
+            <canvas id="chart"></canvas>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
+
+<script>
+    const DESIRED_TIME = 3;
+    const MAX_VARIANCE = 0.5;
+    let startTime;
+    let timerInterval;
+    let attempts = [];
+    let chart;
+
+    document.getElementById('timerButton').addEventListener('click', function () {
+        if (this.innerText === 'Start') {
+            startTime = Date.now();
+            this.innerText = 'Stop';
+            timerInterval = setInterval(updateTimer, 100);
+        } else {
+            clearInterval(timerInterval);
+            let stopTime = Date.now();
+            let elapsedTime = (stopTime - startTime) / 1000;
+
+            let result = {
+                startTime: startTime,
+                stopTime: stopTime,
+                elapsedTime: elapsedTime
+            };
+
+            updateResult(result);
+            attempts.push(result);
+            updateChart();
+        }
+    });
+
+    function updateTimer() {
+        let currentTime = Date.now();
+        let elapsedTime = (currentTime - startTime) / 1000;
+        document.getElementById('result').innerText = `Elapsed Time: ${elapsedTime.toFixed(1)} seconds`;
+    }
+
+    function updateResult(result) {
+        let diff = Math.abs(result.elapsedTime - DESIRED_TIME);
+        let indication;
+        if (diff <= MAX_VARIANCE) {
+            indication = 'green';
+        } else if (diff <= 0.2) {
+            indication = 'blue';
+        } else if (diff <= 0.5) {
+            indication = 'yellow';
+        } else {
+            indication = 'red';
+        }
+        document.getElementById('result').innerHTML = `
+      Elapsed Time: ${result.elapsedTime.toFixed(1)} seconds
+      <div class="mt-2 text-${indication}">Indication: ${indication}</div>
+    `;
+    }
+
+    function updateChart() {
+        let labels = [];
+        let data = [];
+        attempts.forEach((attempt, index) => {
+            labels.push(`Attempt ${index + 1}`);
+            data.push(attempt.elapsedTime);
+        });
+
+        if (!chart) {
+            let ctx = document.getElementById('chart').getContext('2d');
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Elapsed Time',
+                        data: data,
+                        borderColor: 'rgb(75, 192, 192)',
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Elapsed Time (seconds)'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Attempts'
+                            }
+                        }
+                    }
+                }
+            });
+        } else {
+            chart.data.labels = labels;
+            chart.data.datasets[0].data = data;
+            chart.update();
+        }
+    }
+</script>
+
+</body>
+</html>
